@@ -48,5 +48,8 @@
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3",
     "vitest": "^3.0.7"
+  },
+  "dependencies": {
+    "pm2": "^6.0.14"
   }
 }

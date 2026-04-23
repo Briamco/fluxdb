@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import * as readline from 'readline';
+import * as path from 'path';
+import pm2 from 'pm2';
 import { Tokenizer } from '../parser/tokenizer';
 import { Parser } from '../parser/parser';
 
@@ -19,13 +21,134 @@ const COLORS = {
   blue: '\x1b[34m',
 };
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  prompt: `${COLORS.cyan}${COLORS.bright}flux > ${COLORS.reset}`,
-});
+const APP_NAME = 'fluxdb-server';
+const SERVER_PATH = path.join(__dirname, '../server/app.js');
 
-console.log(`${COLORS.magenta}${COLORS.bright}
+async function main() {
+  const args = process.argv.slice(2);
+
+  if (args.length > 0) {
+    const command = args[0].toLowerCase();
+    switch (command) {
+      case 'start':
+        await startServer();
+        process.exit(0);
+      case 'stop':
+        await stopServer();
+        process.exit(0);
+      case 'status':
+        await serverStatus();
+        process.exit(0);
+      case 'logs':
+        showLogs();
+        return;
+      case 'startup':
+        console.log(`${COLORS.yellow}To enable FluxDB to start on system boot, run:${COLORS.reset}`);
+        console.log(`  ${COLORS.bright}pm2 startup${COLORS.reset}`);
+        console.log(`  ${COLORS.bright}pm2 save${COLORS.reset}`);
+        process.exit(0);
+    }
+  }
+
+  // Check if server is running before starting REPL
+  try {
+    const res = await fetch(`${API_URL}/keys`);
+    if (!res.ok) throw new Error();
+  } catch {
+    console.log(`${COLORS.red}Error: FluxDB server is not running.${COLORS.reset}`);
+    console.log(`${COLORS.yellow}Run ${COLORS.bright}flux start${COLORS.reset}${COLORS.yellow} to launch it in the background.${COLORS.reset}`);
+    process.exit(1);
+  }
+
+  startREPL();
+}
+
+function startServer(): Promise<void> {
+  return new Promise((resolve) => {
+    pm2.connect((err) => {
+      if (err) {
+        console.error(err);
+        process.exit(2);
+      }
+
+      pm2.start(
+        {
+          script: SERVER_PATH,
+          name: APP_NAME,
+        },
+        (err) => {
+          if (err) {
+            console.error(`${COLORS.red}Error starting server: ${err.message}${COLORS.reset}`);
+          } else {
+            console.log(`${COLORS.green}FluxDB server started successfully in background.${COLORS.reset}`);
+          }
+          pm2.disconnect();
+          resolve();
+        }
+      );
+    });
+  });
+}
+
+function stopServer(): Promise<void> {
+  return new Promise((resolve) => {
+    pm2.connect((err) => {
+      if (err) {
+        console.error(err);
+        process.exit(2);
+      }
+
+      pm2.stop(APP_NAME, (err) => {
+        if (err) {
+          console.error(`${COLORS.red}Error stopping server: ${err.message}${COLORS.reset}`);
+        } else {
+          console.log(`${COLORS.green}FluxDB server stopped.${COLORS.reset}`);
+        }
+        pm2.disconnect();
+        resolve();
+      });
+    });
+  });
+}
+
+function serverStatus(): Promise<void> {
+  return new Promise((resolve) => {
+    pm2.connect((err) => {
+      if (err) {
+        console.error(err);
+        process.exit(2);
+      }
+
+      pm2.describe(APP_NAME, (err, list) => {
+        if (err || !list || list.length === 0) {
+          console.log(`${COLORS.red}FluxDB server is not running.${COLORS.reset}`);
+        } else {
+          const proc = list[0];
+          console.log(`${COLORS.cyan}Status: ${COLORS.bright}${proc.pm2_env?.status}${COLORS.reset}`);
+          console.log(`${COLORS.cyan}CPU: ${proc.monit?.cpu}%`);
+          console.log(`${COLORS.cyan}Memory: ${Math.round((proc.monit?.memory || 0) / 1024 / 1024)}MB`);
+        }
+        pm2.disconnect();
+        resolve();
+      });
+    });
+  });
+}
+
+function showLogs() {
+  console.log(`${COLORS.yellow}Streaming logs for FluxDB (Ctrl+C to exit)...${COLORS.reset}`);
+  const { spawn } = require('child_process');
+  spawn('pm2', ['logs', APP_NAME], { stdio: 'inherit' });
+}
+
+function startREPL() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: `${COLORS.cyan}${COLORS.bright}flux > ${COLORS.reset}`,
+  });
+
+  console.log(`${COLORS.magenta}${COLORS.bright}
   ███████╗██╗     ██╗   ██╗██╗  ██╗██████╗ ██████╗ 
   ██╔════╝██║     ██║   ██║╚██╗██╔╝██╔══██╗██╔══██╗
   █████╗  ██║     ██║   ██║ ╚███╔╝ ██║  ██║██████╔╝
@@ -33,72 +156,78 @@ console.log(`${COLORS.magenta}${COLORS.bright}
   ██║     ███████╗╚██████╔╝██╔╝ ██╗██████╔╝██████╔╝
   ╚═╝     ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚═════╝ 
 ${COLORS.reset}`);
-console.log(`${COLORS.dim}In-memory JSON Document Store${COLORS.reset}\n`);
-console.log(`${COLORS.yellow}Available Commands:${COLORS.reset}`);
-console.log(`  ${COLORS.bright}set${COLORS.reset} <key> <value> [ttl]`);
-console.log(`  ${COLORS.bright}get${COLORS.reset} <key>`);
-console.log(`  ${COLORS.bright}del${COLORS.reset} <key>`);
-console.log(`  ${COLORS.bright}exists${COLORS.reset} <key>`);
-console.log(`  ${COLORS.bright}keys${COLORS.reset}`);
-console.log(`  ${COLORS.bright}find${COLORS.reset} <collection> <path> <op> <val>`);
-console.log(`  ${COLORS.bright}clear${COLORS.reset}, ${COLORS.bright}exit${COLORS.reset}\n`);
-
-rl.prompt();
-
-rl.on('line', async (line: string) => {
-  const trimmed = line.trim();
-  if (!trimmed) {
-    rl.prompt();
-    return;
-  }
-
-  try {
-    const tokens = tokenizer.tokenize(trimmed);
-    const command = parser.parse(tokens);
-
-    switch (command.type) {
-      case 'exit':
-        rl.close();
-        return;
-
-      case 'set':
-        await handleSet(command.args);
-        break;
-
-      case 'get':
-        await handleGet(command.args);
-        break;
-
-      case 'del':
-        await handleDel(command.args);
-        break;
-
-      case 'exists':
-        await handleExists(command.args);
-        break;
-
-      case 'keys':
-        await handleKeys();
-        break;
-
-      case 'clear':
-        console.clear();
-        break;
-
-      case 'find':
-        await handleFind(command.args);
-        break;
-
-      default:
-        console.log(`${COLORS.red}Unknown command: ${command.type}${COLORS.reset}`);
-    }
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`${COLORS.red}Error: ${message}${COLORS.reset}`);
-  }
+  console.log(`${COLORS.dim}In-memory JSON Document Store${COLORS.reset}\n`);
+  console.log(`${COLORS.yellow}Available Commands:${COLORS.reset}`);
+  console.log(`  ${COLORS.bright}set${COLORS.reset} <key> <value> [ttl]`);
+  console.log(`  ${COLORS.bright}get${COLORS.reset} <key>`);
+  console.log(`  ${COLORS.bright}del${COLORS.reset} <key>`);
+  console.log(`  ${COLORS.bright}exists${COLORS.reset} <key>`);
+  console.log(`  ${COLORS.bright}keys${COLORS.reset}`);
+  console.log(`  ${COLORS.bright}find${COLORS.reset} <collection> <path> <op> <val>`);
+  console.log(`  ${COLORS.bright}clear${COLORS.reset}, ${COLORS.bright}exit${COLORS.reset}\n`);
 
   rl.prompt();
-});
+
+  rl.on('line', async (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      rl.prompt();
+      return;
+    }
+
+    try {
+      const tokens = tokenizer.tokenize(trimmed);
+      const command = parser.parse(tokens);
+
+      switch (command.type) {
+        case 'exit':
+          rl.close();
+          return;
+
+        case 'set':
+          await handleSet(command.args);
+          break;
+
+        case 'get':
+          await handleGet(command.args);
+          break;
+
+        case 'del':
+          await handleDel(command.args);
+          break;
+
+        case 'exists':
+          await handleExists(command.args);
+          break;
+
+        case 'keys':
+          await handleKeys();
+          break;
+
+        case 'clear':
+          console.clear();
+          break;
+
+        case 'find':
+          await handleFind(command.args);
+          break;
+
+        default:
+          console.log(`${COLORS.red}Unknown command: ${command.type}${COLORS.reset}`);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`${COLORS.red}Error: ${message}${COLORS.reset}`);
+    }
+
+    rl.prompt();
+  });
+
+  rl.on('close', () => {
+    console.log(`\n${COLORS.magenta}${COLORS.bright}Goodbye!${COLORS.reset}`);
+    process.exit(0);
+  });
+}
 
 async function handleSet(args: unknown[]) {
   if (args.length < 2) {
@@ -209,7 +338,4 @@ async function handleFind(args: unknown[]) {
   printData(data.results);
 }
 
-rl.on('close', () => {
-  console.log(`\n${COLORS.magenta}${COLORS.bright}Goodbye!${COLORS.reset}`);
-  process.exit(0);
-});
+main();
