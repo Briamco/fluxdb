@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import * as readline from 'readline';
 import { Tokenizer } from '../parser/tokenizer';
 import { Parser } from '../parser/parser';
