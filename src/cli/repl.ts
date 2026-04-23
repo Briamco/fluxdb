@@ -45,7 +45,9 @@ async function main() {
         showLogs();
         return;
       case 'startup':
-        console.log(`${COLORS.yellow}To enable FluxDB to start on system boot, run:${COLORS.reset}`);
+        console.log(
+          `${COLORS.yellow}To enable FluxDB to start on system boot, run:${COLORS.reset}`
+        );
         console.log(`  ${COLORS.bright}pm2 startup${COLORS.reset}`);
         console.log(`  ${COLORS.bright}pm2 save${COLORS.reset}`);
         process.exit(0);
@@ -59,7 +61,9 @@ async function main() {
     if (!res.ok) throw new Error();
   } catch {
     console.log(`${COLORS.red}Error: FluxDB server is not running.${COLORS.reset}`);
-    console.log(`${COLORS.yellow}Run ${COLORS.bright}flux start${COLORS.reset}${COLORS.yellow} to launch it in the background.${COLORS.reset}`);
+    console.log(
+      `${COLORS.yellow}Run ${COLORS.bright}flux start${COLORS.reset}${COLORS.yellow} to launch it in the background.${COLORS.reset}`
+    );
     process.exit(1);
   }
 
@@ -83,7 +87,9 @@ function startServer(): Promise<void> {
           if (err) {
             console.error(`${COLORS.red}Error starting server: ${err.message}${COLORS.reset}`);
           } else {
-            console.log(`${COLORS.green}FluxDB server started successfully in background.${COLORS.reset}`);
+            console.log(
+              `${COLORS.green}FluxDB server started successfully in background.${COLORS.reset}`
+            );
           }
           pm2.disconnect();
           resolve();
@@ -127,9 +133,13 @@ function serverStatus(): Promise<void> {
           console.log(`${COLORS.red}FluxDB server is not running.${COLORS.reset}`);
         } else {
           const proc = list[0];
-          console.log(`${COLORS.cyan}Status: ${COLORS.bright}${proc.pm2_env?.status}${COLORS.reset}`);
+          console.log(
+            `${COLORS.cyan}Status: ${COLORS.bright}${proc.pm2_env?.status}${COLORS.reset}`
+          );
           console.log(`${COLORS.cyan}CPU: ${proc.monit?.cpu}%`);
-          console.log(`${COLORS.cyan}Memory: ${Math.round((proc.monit?.memory || 0) / 1024 / 1024)}MB`);
+          console.log(
+            `${COLORS.cyan}Memory: ${Math.round((proc.monit?.memory || 0) / 1024 / 1024)}MB`
+          );
         }
         pm2.disconnect();
         resolve();
