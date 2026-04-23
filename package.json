@@ -5,7 +5,7 @@
   "main": "dist/sdk/index.js",
   "types": "dist/sdk/index.d.ts",
   "bin": {
-    "flux": "dist/cli/repl.js"
+    "flux": "bin/flux.js"
   },
   "scripts": {
     "start:server": "ts-node src/server/app.ts",
