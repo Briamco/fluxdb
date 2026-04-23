@@ -11,7 +11,7 @@ export class Parser {
       throw new Error('No tokens to parse');
     }
 
-    const commandType = tokens[0].value.toLowerCase();
+    const commandType = (tokens[0].value as string).toLowerCase();
     const args = tokens.slice(1).map((t) => t.value);
 
     return {
