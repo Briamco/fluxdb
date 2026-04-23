@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('../dist/cli/repl.js');
+require('../dist/src/cli/repl.js');

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as readline from 'readline';
 import * as path from 'path';
+import { spawn } from 'child_process';
 import pm2 from 'pm2';
 import { Tokenizer } from '../parser/tokenizer';
 import { Parser } from '../parser/parser';
@@ -22,6 +23,7 @@ const COLORS = {
 };
 
 const APP_NAME = 'fluxdb-server';
+// Use a more robust way to find the server path
 const SERVER_PATH = path.join(__dirname, '../server/app.js');
 
 async function main() {
@@ -50,7 +52,8 @@ async function main() {
     }
   }
 
-  // Check if server is running before starting REPL
+  // If we are here, we are either starting REPL or the command was not recognized
+  // But first check if server is running
   try {
     const res = await fetch(`${API_URL}/keys`);
     if (!res.ok) throw new Error();
@@ -137,8 +140,7 @@ function serverStatus(): Promise<void> {
 
 function showLogs() {
   console.log(`${COLORS.yellow}Streaming logs for FluxDB (Ctrl+C to exit)...${COLORS.reset}`);
-  const { spawn } = require('child_process');
-  spawn('pm2', ['logs', APP_NAME], { stdio: 'inherit' });
+  spawn('pm2', ['logs', APP_NAME], { stdio: 'inherit', shell: true });
 }
 
 function startREPL() {
