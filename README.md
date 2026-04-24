@@ -20,12 +20,12 @@ FluxDB is a lightweight, high-performance in-memory JSON document database. It c
 
 ### As a Global CLI Tool
 ```bash
-npm install -g fluxdb
+npm install -g @briamco/fluxdb
 ```
 
 ### As a Project Dependency (SDK)
 ```bash
-npm install fluxdb
+npm install @briamco/fluxdb
 ```
 
 ## 🖥️ CLI & Server Management
@@ -70,7 +70,7 @@ flux > find user age > 20
 The SDK provides a fluent interface for interacting with your database.
 
 ```typescript
-import { FluxDB } from 'fluxdb';
+import { FluxDB } from '@briamco/fluxdb';
 
 const db = new FluxDB('http://localhost:3000');
 
