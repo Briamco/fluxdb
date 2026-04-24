@@ -1,6 +1,6 @@
 {
-  "name": "fluxdb",
-  "version": "1.0.0",
+  "name": "@briamco/fluxdb",
+  "version": "1.0.1",
   "description": "A lightweight, in-memory JSON document database with a fluent SDK and interactive CLI.",
   "main": "dist/sdk/index.js",
   "types": "dist/sdk/index.d.ts",
